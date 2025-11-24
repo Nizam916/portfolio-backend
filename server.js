@@ -149,7 +149,7 @@ const userSchema = new mongoose.Schema(
   },
   { timestamps: true }
 );
-const mongoose = require("mongoose");
+// const mongoose = require("mongoose");
 require("dotenv").config();
 
 mongoose
