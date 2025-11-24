@@ -1,7 +1,5 @@
 // server.js
 
-// server.js
-
 require("dotenv").config();
 const express = require("express");
 const cors = require("cors");
@@ -9,19 +7,24 @@ const mongoose = require("mongoose");
 const bcrypt = require("bcrypt");
 const jwt = require("jsonwebtoken");
 
-
 const app = express();
 
-// middlewares
-app.use(cors());
+// ───────── Middlewares ─────────
+app.use(cors()); // you can restrict origin later if needed
 app.use(express.json());
 
-// test route
-app.get("/api/health", (req, res) => {
-  res.json({ status: "ok", message: "Backend is running" });
-});
+// ───────── Models ─────────
+const userSchema = new mongoose.Schema(
+  {
+    name: { type: String, required: true },
+    email: { type: String, required: true, unique: true },
+    passwordHash: { type: String, required: true },
+  },
+  { timestamps: true }
+);
 
-// simple contact "model" using mongoose Schema directly here
+const User = mongoose.model("User", userSchema);
+
 const contactSchema = new mongoose.Schema(
   {
     name: { type: String, required: true },
@@ -33,8 +36,14 @@ const contactSchema = new mongoose.Schema(
 
 const ContactMessage = mongoose.model("ContactMessage", contactSchema);
 
+// ───────── Routes ─────────
 
-// POST /api/auth/signup
+// Health
+app.get("/api/health", (req, res) => {
+  res.json({ status: "ok", message: "Backend is running" });
+});
+
+// Signup
 app.post("/api/auth/signup", async (req, res) => {
   try {
     const { name, email, password } = req.body;
@@ -49,7 +58,6 @@ app.post("/api/auth/signup", async (req, res) => {
     }
 
     const passwordHash = await bcrypt.hash(password, 10);
-
     const user = await User.create({ name, email, passwordHash });
 
     return res.status(201).json({
@@ -62,7 +70,7 @@ app.post("/api/auth/signup", async (req, res) => {
   }
 });
 
-// POST /api/auth/login
+// Login
 app.post("/api/auth/login", async (req, res) => {
   try {
     const { email, password } = req.body;
@@ -83,7 +91,7 @@ app.post("/api/auth/login", async (req, res) => {
 
     const token = jwt.sign(
       { userId: user._id, email: user.email },
-      process.env.JWT_SECRET,
+      process.env.JWT_SECRET || "devsecret",
       { expiresIn: "7d" }
     );
 
@@ -97,7 +105,7 @@ app.post("/api/auth/login", async (req, res) => {
   }
 });
 
-// POST /api/contact route
+// Contact
 app.post("/api/contact", async (req, res) => {
   try {
     const { name, email, message } = req.body;
@@ -115,12 +123,9 @@ app.post("/api/contact", async (req, res) => {
   }
 });
 
-// connect to MongoDB and start server
+// ───────── Connect + Start ─────────
 const PORT = process.env.PORT || 5000;
 const MONGO_URI = process.env.MONGO_URI;
-app.listen(PORT, () => {
-  console.log(`Server running on port ${PORT}`);
-});
 
 if (!MONGO_URI) {
   console.error("❌ MONGO_URI is not defined in .env");
@@ -132,7 +137,7 @@ mongoose
   .then(() => {
     console.log("✅ Connected to MongoDB");
     app.listen(PORT, () => {
-      console.log(`🚀 Server running on http://localhost:${PORT}`);
+      console.log(`🚀 Server running on port ${PORT}`);
     });
   })
   .catch((err) => {
@@ -140,22 +145,3 @@ mongoose
     process.exit(1);
   });
 
-  // USER SCHEMA & MODEL
-const userSchema = new mongoose.Schema(
-  {
-    name: { type: String, required: true },
-    email: { type: String, required: true, unique: true },
-    passwordHash: { type: String, required: true },
-  },
-  { timestamps: true }
-);
-// const mongoose = require("mongoose");
-require("dotenv").config();
-
-mongoose
-  .connect(process.env.MONGO_URI)
-  .then(() => console.log("MongoDB connected"))
-  .catch((err) => console.log(err));
-
-
-const User = mongoose.model("User", userSchema);
